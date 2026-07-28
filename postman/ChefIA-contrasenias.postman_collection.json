@@ -1,0 +1,61 @@
+{
+  "info": {
+    "name": "ChefIA - Contrasenias",
+    "description": "Flujos de clave temporal y cambio de clave para el frontend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "gatewayUrl", "value": "http://localhost:8080" },
+    { "key": "usernameTemporal", "value": "usuario.temporal" },
+    { "key": "contraseniaTemporal", "value": "Temporal123!", "type": "secret" },
+    { "key": "contraseniaNueva", "value": "Definitiva456!", "type": "secret" },
+    { "key": "usuarioToken", "value": "", "type": "secret" }
+  ],
+  "item": [
+    {
+      "name": "Cambiar contrasenia temporal",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{usernameTemporal}}\",\n  \"contraseniaTemporal\": \"{{contraseniaTemporal}}\",\n  \"contraseniaNueva\": \"{{contraseniaNueva}}\",\n  \"confirmacionContrasenia\": \"{{contraseniaNueva}}\"\n}"
+        },
+        "url": "{{gatewayUrl}}/api/auth/contrasenia-temporal",
+        "description": "Se usa antes del primer login para una cuenta creada por ADMIN."
+      }
+    },
+    {
+      "name": "Login con contrasenia nueva",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{usernameTemporal}}\",\n  \"password\": \"{{contraseniaNueva}}\"\n}"
+        },
+        "url": "{{gatewayUrl}}/api/auth/login"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "exec": ["const json = pm.response.json();", "pm.environment.set('usuarioToken', json.access_token);"] }
+      }]
+    },
+    {
+      "name": "Cambiar contrasenia con sesion activa",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{usuarioToken}}", "type": "string" }]
+        },
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"contraseniaActual\": \"{{contraseniaNueva}}\",\n  \"contraseniaNueva\": \"Definitiva789!\",\n  \"confirmacionContrasenia\": \"Definitiva789!\"\n}"
+        },
+        "url": "{{gatewayUrl}}/api/auth/contrasenia"
+      }
+    }
+  ]
+}
