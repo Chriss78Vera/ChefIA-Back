@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: recomendaciones-svc
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5435/chefia_recomendaciones}
+    username: ${SPRING_DATASOURCE_USERNAME:chefia}
+    password: ${SPRING_DATASOURCE_PASSWORD:chefia_dev}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8180/realms/chefia}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8180/realms/chefia/protocol/openid-connect/certs}
+
+services:
+  usuarios:
+    url: ${USUARIOS_SERVICE_URL:http://localhost:8081}
+  recetas:
+    url: ${RECETAS_SERVICE_URL:http://localhost:8082}
+  favoritos:
+    url: ${FAVORITOS_SERVICE_URL:http://localhost:8083}
+
+ollama:
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:qwen2.5:1.5b}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      recetas:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 3
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 20s
+      ollama:
+        sliding-window-size: 3
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+  retry:
+    instances:
+      recetas:
+        max-attempts: 2
+        wait-duration: 300ms
+      ollama:
+        max-attempts: 2
+        wait-duration: 1s
+  timelimiter:
+    instances:
+      recetas:
+        timeout-duration: 5s
+        cancel-running-future: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakers,circuitbreakerevents,retries,retryevents
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    circuitbreakers:
+      enabled: true

@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: usuarios-svc
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/chefia_usuarios}
+    username: ${SPRING_DATASOURCE_USERNAME:chefia}
+    password: ${SPRING_DATASOURCE_PASSWORD:chefia_dev}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8180/realms/chefia}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8180/realms/chefia/protocol/openid-connect/certs}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
