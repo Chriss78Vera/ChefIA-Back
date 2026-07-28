@@ -2,6 +2,20 @@
 
 Backend que recomienda recetas segun el animo y las preferencias alimenticias del usuario.
 
+## Contenido publicado
+
+Este repositorio contiene actualmente:
+
+- `auth-svc`: autenticacion, usuarios administrativos y cambio de contrasenia.
+- `usuarios-svc`: perfiles y preferencias.
+- `recomendaciones-svc`: integracion con Ollama, cache y orquestacion.
+- `nginx`: configuracion del gateway.
+
+Por decision de publicacion, este repositorio no incluye `recetas-svc`,
+`favoritos-svc`, `keycloak`, `docker-compose.yml`, `docs` ni `postman`. Esos
+componentes forman parte del proyecto local completo y son dependencias necesarias
+para ejecutar todos los flujos descritos en este README.
+
 ## Arquitectura
 
 | Componente | Responsabilidad |
@@ -16,12 +30,12 @@ Backend que recomienda recetas segun el animo y las preferencias alimenticias de
 
 Cada servicio con estado tiene su propia base PostgreSQL. Ninguna tabla se comparte.
 
-## Inicio
+## Inicio local completo
 
 1. Asegurese de que Ollama este activo y descargue un modelo:
    `ollama pull llama3.2`
 2. Copie `.env.example` a `.env` y cambie las contrasenias.
-3. Ejecute:
+3. Desde una copia que tambien tenga los componentes no publicados, ejecute:
 
 ```bash
 docker compose up -d --build
@@ -38,8 +52,9 @@ El proyecto requiere **JDK 17**.
 2. En `File > Project Structure > Project`, seleccione un JDK 17 y Language level 17.
 3. En `Settings > Build Tools > Maven > Runner`, seleccione el mismo JDK 17.
 4. Abra el `pom.xml` raiz y seleccione `Add as Maven Project` o `Reload All Maven Projects`.
-5. Confirme que aparecen cinco modulos: `auth-svc`, `usuarios-svc`, `recetas-svc`,
-   `favoritos-svc` y `recomendaciones-svc`.
+5. En este repositorio aparecen tres modulos publicados: `auth-svc`,
+   `usuarios-svc` y `recomendaciones-svc`. El proyecto local completo tambien
+   utiliza `recetas-svc` y `favoritos-svc`.
 
 Cada microservicio tambien tiene un POM Spring Boot autonomo y puede abrirse por
 separado, siguiendo la misma estructura de los proyectos de referencia. IntelliJ
@@ -107,6 +122,30 @@ POST /api/auth/contrasenia-temporal
 
 Un usuario con sesion activa puede cambiarla con `PUT /api/auth/contrasenia` enviando su token, la clave actual, la nueva y su confirmacion.
 
+## Administracion de usuarios
+
+Un ADMIN puede listar solamente las cuentas que no tienen el rol `ADMIN`:
+
+```http
+GET /api/admin/usuarios
+Authorization: Bearer <admin-token>
+```
+
+Tambien puede activar o desactivar una cuenta sin eliminarla de Keycloak:
+
+```http
+PATCH /api/admin/usuarios/{id}/estado
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{
+  "activo": false
+}
+```
+
+Una cuenta inactiva no puede iniciar una sesion nueva. Para reactivarla se envia
+el mismo endpoint con `"activo": true`.
+
 La cuenta se crea en Keycloak con rol `USUARIO`. En el primer acceso del usuario,
 `usuarios-svc` crea su perfil complementario a partir del JWT. La contrasenia no se
 almacena en las bases de datos de ChefIA. Un usuario sin rol `ADMIN` recibe
@@ -126,14 +165,16 @@ curl -X POST http://localhost:8080/api/recomendar \
 ```
 
 Cada recomendacion devuelve una receta completa: nombre, motivo, descripcion,
-porciones, tiempo, dificultad, ingredientes con cantidades, pasos ordenados y
-entre dos y cinco `tags` generados por Ollama. Por ejemplo:
+tipo de receta, porciones, tiempo, dificultad, ingredientes, pasos, tags, origen,
+identificador de receta e `isSaved`. Este ultimo campo permite al frontend saber
+si la receta ya existe en el catalogo. Por ejemplo:
 
 ```json
 {
   "nombre": "Sopa de lentejas",
   "motivo": "Reconfortante para un momento de estres",
   "descripcion": "Sopa vegetal caliente y nutritiva",
+  "tipoReceta": "SOPA",
   "porciones": 2,
   "tiempoMinutos": 30,
   "dificultad": "FACIL",
@@ -147,19 +188,25 @@ entre dos y cinco `tags` generados por Ollama. Por ejemplo:
     "Sofreir la cebolla durante 3 minutos.",
     "Agregar las lentejas y cocinar durante 20 minutos."
   ],
-  "tags": ["vegano", "reconfortante", "saludable"]
+  "tags": ["vegano", "reconfortante", "saludable"],
+  "origen": "OLLAMA",
+  "recetaId": null,
+  "isSaved": false
 }
 ```
 
-Las pruebas manuales de la API se realizan con la coleccion de Postman incluida
-en la carpeta `postman/`. Los health checks internos usan Actuator.
+Las pruebas manuales del proyecto local se realizan con Postman. Los health checks
+internos usan Actuator.
 
 ## Resiliencia demostrable
 
-`recomendaciones-svc -> recetas-svc` aplica Circuit Breaker, Retry y TimeLimiter.
-Si se detiene `recetas-svc`, se usan tres recetas de respaldo. La llamada a Ollama
-tiene Circuit Breaker y Retry, pero no tiene fallback de contenido: si Ollama no
-responde, la solicitud termina con error.
+Cuando Ollama responde y existe una receta publica compatible, la respuesta combina
+dos opciones nuevas de Ollama con una receta publica. Si no existe una receta publica,
+devuelve tres opciones de Ollama.
+
+Si Ollama no responde, `recomendaciones-svc` consulta recetas publicas compatibles
+que el usuario no tenga en favoritos. El cache propio conserva recomendaciones
+generadas anteriormente y evita depender completamente de una nueva generacion.
 
 `favoritos-svc -> recetas-svc` aplica Circuit Breaker y Retry. Si recetas no esta
 disponible, el favorito se guarda con un nombre provisional. Los errores `4xx` no
@@ -167,14 +214,15 @@ activan ese fallback. Los eventos se consultan en:
 
 `GET /actuator/circuitbreakerevents`
 
-La documentacion detallada esta disponible en `docs/README.md`.
+La documentacion tecnica completa se mantiene en la copia local del proyecto.
 
 ## Pruebas
 
 ```bash
-./mvnw test
+./mvnw -pl auth-svc,usuarios-svc,recomendaciones-svc test
 # Windows
-mvnw.cmd test
+mvnw.cmd -pl auth-svc,usuarios-svc,recomendaciones-svc test
+# Solamente en el proyecto local completo
 docker compose config
 docker compose up -d --build
 docker compose ps
@@ -182,17 +230,8 @@ docker compose ps
 
 En Windows puede usarse Maven instalado (`mvn test`) o los wrappers de cada proyecto.
 
-### Postman
+### Cliente web
 
-Importe los dos archivos de la carpeta `postman/`:
-
-- `ChefIA.postman_collection.json`
-- `ChefIA.postman_environment.json`
-
-Seleccione el entorno **ChefIA - Local** y ejecute primero `01 - Autenticacion`.
-Los scripts almacenan automaticamente `usuarioToken`, `adminToken` y el ID de la
-receta administrativa creada.
-
-El password grant de la coleccion se incluye exclusivamente para pruebas locales.
-El cliente web debe iniciar sesion mediante Authorization Code + PKCE contra
-Keycloak y enviar el access token como `Authorization: Bearer <token>`.
+El password grant se utiliza exclusivamente para pruebas locales. Un cliente web
+debe iniciar sesion mediante Authorization Code con PKCE contra Keycloak y enviar
+el access token como `Authorization: Bearer <token>`.
