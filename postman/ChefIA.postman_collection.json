@@ -1,0 +1,1042 @@
+{
+    "info":  {
+                 "_postman_id":  "9bda5360-64a8-44c1-bd46-e95cc98fcda2",
+                 "name":  "ChefIA - Backend",
+                 "description":  "Coleccion para integrar y probar el backend de ChefIA. Ejecute primero las solicitudes de Autenticacion. El password grant se usa unicamente para pruebas locales; el frontend debe usar Authorization Code + PKCE con Keycloak.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "auth":  {
+                 "type":  "noauth"
+             },
+    "event":  [
+                  {
+                      "listen":  "prerequest",
+                      "script":  {
+                                     "type":  "text/javascript",
+                                     "exec":  [
+                                                  "pm.request.headers.upsert({ key: \u0027Accept\u0027, value: \u0027application/json\u0027 });"
+                                              ]
+                                 }
+                  }
+              ],
+    "item":  [
+                 {
+                     "name":  "00 - Estado y alta administrativa",
+                     "description":  "Las dos solicitudes de creacion requieren ejecutar primero Login USUARIO y Login ADMIN en la carpeta 01.",
+                     "item":  [
+                                  {
+                                      "name":  "Health del gateway",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/health",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "health"
+                                                                           ]
+                                                              },
+                                                      "description":  "Comprueba que Nginx esta disponible."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Gateway disponible\u0027, () =\u003e pm.response.to.have.status(200));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Configuracion OIDC de Keycloak",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{keycloakUrl}}/realms/{{realm}}/.well-known/openid-configuration",
+                                                                  "host":  [
+                                                                               "{{keycloakUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "realms",
+                                                                               "{{realm}}",
+                                                                               ".well-known",
+                                                                               "openid-configuration"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Keycloak disponible\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.test(\u0027Issuer correcto\u0027, () =\u003e pm.expect(pm.response.json().issuer).to.include(\u0027/realms/chefia\u0027));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "ADMIN - Crear usuario en Keycloak",
+                                      "auth":  {
+                                                   "type":  "bearer",
+                                                   "bearer":  [
+                                                                  {
+                                                                      "key":  "token",
+                                                                      "value":  "{{adminToken}}",
+                                                                      "type":  "string"
+                                                                  }
+                                                              ]
+                                               },
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"{{createdUsername}}\",\n  \"email\": \"{{createdUsername}}@chefia.local\",\n  \"nombre\": \"Usuario\",\n  \"apellido\": \"Frontend\",\n  \"password\": \"{{createdUserPassword}}\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/admin/usuarios",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "admin",
+                                                                               "usuarios"
+                                                                           ]
+                                                              },
+                                                      "description":  "Crea la cuenta en Keycloak con rol USUARIO. El perfil complementario se crea en usuarios-svc durante el primer acceso. La contrasenia no se almacena en PostgreSQL."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.environment.set(\u0027createdUsername\u0027, `frontend${Date.now()}`);"
+                                                                                ]
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Usuario creado en Keycloak\u0027, () =\u003e pm.response.to.have.status(201));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Rol USUARIO asignado\u0027, () =\u003e pm.expect(json.rol).to.eql(\u0027USUARIO\u0027));",
+                                                                                    "pm.test(\u0027Keycloak devolvio ID\u0027, () =\u003e pm.expect(json.id).to.be.a(\u0027string\u0027).and.not.empty);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Seguridad - USUARIO no puede crear usuarios",
+                                      "auth":  {
+                                                   "type":  "bearer",
+                                                   "bearer":  [
+                                                                  {
+                                                                      "key":  "token",
+                                                                      "value":  "{{usuarioToken}}",
+                                                                      "type":  "string"
+                                                                  }
+                                                              ]
+                                               },
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"usuario-bloqueado\",\n  \"email\": \"bloqueado@chefia.local\",\n  \"nombre\": \"No\",\n  \"apellido\": \"Permitido\",\n  \"password\": \"Frontend123!\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/admin/usuarios",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "admin",
+                                                                               "usuarios"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Creacion bloqueada para USUARIO\u0027, () =\u003e pm.response.to.have.status(403));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "01 - Autenticacion",
+                     "description":  "Obtiene y almacena tokens de demostracion. Estas credenciales y el password grant son solo para desarrollo local.",
+                     "item":  [
+                                  {
+                                      "name":  "Registro publico USUARIO",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"{{registerUsername}}\",\n  \"email\": \"{{registerUsername}}@chefia.local\",\n  \"nombre\": \"Registro\",\n  \"apellido\": \"Publico\",\n  \"password\": \"ClaveSegura123!\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/auth/registro",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "registro"
+                                                                           ]
+                                                              },
+                                                      "description":  "Crea una cuenta publica directamente en Keycloak. La API asigna siempre el rol USUARIO y no acepta roles enviados por el cliente."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.environment.set(\u0027registerUsername\u0027, `registro${Date.now()}`);"
+                                                                                ]
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Registro creado\u0027, () =\u003e pm.response.to.have.status(201));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Rol USUARIO asignado\u0027, () =\u003e pm.expect(json.rol).to.eql(\u0027USUARIO\u0027));",
+                                                                                    "pm.test(\u0027No crea ADMIN\u0027, () =\u003e pm.expect(json.rol).not.to.eql(\u0027ADMIN\u0027));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Login USUARIO",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"{{usuarioUsername}}\",\n  \"password\": \"{{usuarioPassword}}\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/auth/login",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Login exitoso\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.expect(json.access_token).to.be.a(\u0027string\u0027).and.not.empty;",
+                                                                                    "pm.environment.set(\u0027usuarioToken\u0027, json.access_token);",
+                                                                                    "pm.environment.set(\u0027refreshToken\u0027, json.refresh_token);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Login ADMIN",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/auth/login",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Login exitoso\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.expect(json.access_token).to.be.a(\u0027string\u0027).and.not.empty;",
+                                                                                    "pm.environment.set(\u0027adminToken\u0027, json.access_token);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Cerrar sesion USUARIO",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/x-www-form-urlencoded"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "urlencoded",
+                                                                   "urlencoded":  [
+                                                                                      {
+                                                                                          "key":  "client_id",
+                                                                                          "value":  "{{clientId}}",
+                                                                                          "type":  "text"
+                                                                                      },
+                                                                                      {
+                                                                                          "key":  "refresh_token",
+                                                                                          "value":  "{{refreshToken}}",
+                                                                                          "type":  "text"
+                                                                                      }
+                                                                                  ]
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/logout",
+                                                                  "host":  [
+                                                                               "{{keycloakUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "realms",
+                                                                               "{{realm}}",
+                                                                               "protocol",
+                                                                               "openid-connect",
+                                                                               "logout"
+                                                                           ]
+                                                              },
+                                                      "description":  "Para usar logout desde Postman, almacene primero un refresh token en la variable refreshToken."
+                                                  },
+                                      "disabled":  true
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "02 - Usuarios",
+                     "auth":  {
+                                  "type":  "bearer",
+                                  "bearer":  [
+                                                 {
+                                                     "key":  "token",
+                                                     "value":  "{{usuarioToken}}",
+                                                     "type":  "string"
+                                                 }
+                                             ]
+                              },
+                     "item":  [
+                                  {
+                                      "name":  "Consultar perfil",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/usuarios/perfil",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "usuarios",
+                                                                               "perfil"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Perfil consultado\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.test(\u0027Identidad tomada del JWT\u0027, () =\u003e pm.expect(pm.response.json().keycloakSub).to.be.a(\u0027string\u0027).and.not.empty);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Consultar preferencias",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/usuarios/preferencias",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "usuarios",
+                                                                               "preferencias"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Actualizar preferencias",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"tipoAlimentacion\": \"VEGANO\",\n  \"restricciones\": [\n    \"SIN_LACTOSA\"\n  ],\n  \"ingredientesNoDeseados\": [\n    \"mani\"\n  ]\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/usuarios/preferencias",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "usuarios",
+                                                                               "preferencias"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Preferencias actualizadas\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.test(\u0027Tipo guardado\u0027, () =\u003e pm.expect(pm.response.json().tipoAlimentacion).to.eql(\u0027VEGANO\u0027));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "03 - Recetas",
+                     "item":  [
+                                  {
+                                      "name":  "Listar recetas",
+                                      "auth":  {
+                                                   "type":  "bearer",
+                                                   "bearer":  [
+                                                                  {
+                                                                      "key":  "token",
+                                                                      "value":  "{{usuarioToken}}",
+                                                                      "type":  "string"
+                                                                  }
+                                                              ]
+                                               },
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recetas",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recetas"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Catalogo consultado\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.test(\u0027Respuesta es una lista\u0027, () =\u003e pm.expect(pm.response.json()).to.be.an(\u0027array\u0027));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Filtrar recetas",
+                                      "auth":  {
+                                                   "type":  "bearer",
+                                                   "bearer":  [
+                                                                  {
+                                                                      "key":  "token",
+                                                                      "value":  "{{usuarioToken}}",
+                                                                      "type":  "string"
+                                                                  }
+                                                              ]
+                                               },
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recetas?tipoAlimentacion=VEGANO\u0026tiempoMaximo=30",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recetas"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "tipoAlimentacion",
+                                                                                    "value":  "VEGANO"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "tiempoMaximo",
+                                                                                    "value":  "30"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Consultar receta por ID",
+                                      "auth":  {
+                                                   "type":  "bearer",
+                                                   "bearer":  [
+                                                                  {
+                                                                      "key":  "token",
+                                                                      "value":  "{{usuarioToken}}",
+                                                                      "type":  "string"
+                                                                  }
+                                                              ]
+                                               },
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recetas/{{recetaId}}",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recetas",
+                                                                               "{{recetaId}}"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "ADMIN - Crear receta",
+                                      "auth":  {
+                                                   "type":  "bearer",
+                                                   "bearer":  [
+                                                                  {
+                                                                      "key":  "token",
+                                                                      "value":  "{{adminToken}}",
+                                                                      "type":  "string"
+                                                                  }
+                                                              ]
+                                               },
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"nombre\": \"Bowl de garbanzos {{$randomInt}}\",\n  \"descripcion\": \"Bowl nutritivo con vegetales frescos\",\n  \"tiempoMinutos\": 25,\n  \"dificultad\": \"FACIL\",\n  \"tipoAlimentacion\": \"VEGANO\",\n  \"tipoReceta\": \"PLATO_FUERTE\",\n  \"ingredientes\": [\n    \"garbanzos\",\n    \"tomate\",\n    \"pepino\"\n  ]\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recetas/admin",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recetas",
+                                                                               "admin"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Receta creada\u0027, () =\u003e pm.response.to.have.status(201));",
+                                                                                    "pm.environment.set(\u0027adminRecetaId\u0027, pm.response.json().id);"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "ADMIN - Editar receta",
+                                      "auth":  {
+                                                   "type":  "bearer",
+                                                   "bearer":  [
+                                                                  {
+                                                                      "key":  "token",
+                                                                      "value":  "{{adminToken}}",
+                                                                      "type":  "string"
+                                                                  }
+                                                              ]
+                                               },
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"nombre\": \"Bowl de garbanzos actualizado {{$randomInt}}\",\n  \"descripcion\": \"Bowl actualizado para una comida rapida\",\n  \"tiempoMinutos\": 20,\n  \"dificultad\": \"FACIL\",\n  \"tipoAlimentacion\": \"VEGANO\",\n  \"tipoReceta\": \"PLATO_FUERTE\",\n  \"ingredientes\": [\n    \"garbanzos\",\n    \"tomate\",\n    \"aguacate\"\n  ]\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recetas/admin/{{adminRecetaId}}",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recetas",
+                                                                               "admin",
+                                                                               "{{adminRecetaId}}"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "ADMIN - Eliminar receta",
+                                      "auth":  {
+                                                   "type":  "bearer",
+                                                   "bearer":  [
+                                                                  {
+                                                                      "key":  "token",
+                                                                      "value":  "{{adminToken}}",
+                                                                      "type":  "string"
+                                                                  }
+                                                              ]
+                                               },
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recetas/admin/{{adminRecetaId}}",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recetas",
+                                                                               "admin",
+                                                                               "{{adminRecetaId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Receta eliminada\u0027, () =\u003e pm.response.to.have.status(204));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Seguridad - USUARIO no puede crear",
+                                      "auth":  {
+                                                   "type":  "bearer",
+                                                   "bearer":  [
+                                                                  {
+                                                                      "key":  "token",
+                                                                      "value":  "{{usuarioToken}}",
+                                                                      "type":  "string"
+                                                                  }
+                                                              ]
+                                               },
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"nombre\": \"Receta no autorizada\",\n  \"descripcion\": \"Debe responder 403\",\n  \"tiempoMinutos\": 10,\n  \"dificultad\": \"FACIL\",\n  \"tipoAlimentacion\": \"OMNIVORO\",\n  \"tipoReceta\": \"PLATO_FUERTE\",\n  \"ingredientes\": [\"ingrediente\"]\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recetas/admin",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recetas",
+                                                                               "admin"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Acceso administrativo bloqueado\u0027, () =\u003e pm.response.to.have.status(403));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "04 - Favoritos",
+                     "auth":  {
+                                  "type":  "bearer",
+                                  "bearer":  [
+                                                 {
+                                                     "key":  "token",
+                                                     "value":  "{{usuarioToken}}",
+                                                     "type":  "string"
+                                                 }
+                                             ]
+                              },
+                     "item":  [
+                                  {
+                                      "name":  "Listar favoritos",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/favoritos",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "favoritos"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Agregar favorito",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/favoritos/{{recetaId}}",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "favoritos",
+                                                                               "{{recetaId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Favorito creado o ya existente\u0027, () =\u003e pm.expect([201, 409]).to.include(pm.response.code));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Eliminar favorito",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/favoritos/{{recetaId}}",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "favoritos",
+                                                                               "{{recetaId}}"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Favorito eliminado\u0027, () =\u003e pm.expect([204, 404]).to.include(pm.response.code));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "05 - Recomendaciones",
+                     "auth":  {
+                                  "type":  "bearer",
+                                  "bearer":  [
+                                                 {
+                                                     "key":  "token",
+                                                     "value":  "{{usuarioToken}}",
+                                                     "type":  "string"
+                                                 }
+                                             ]
+                              },
+                     "item":  [
+                                  {
+                                      "name":  "Recomendar para usuario estresado",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"animo\": \"ESTRESADO\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recomendar",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recomendar"
+                                                                           ]
+                                                              },
+                                                      "description":  "Estados validos: FELIZ, CANSADO, ESTRESADO, NOSTALGICO y AVENTURERO."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Recomendacion generada\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "const json = pm.response.json();",
+                                                                                    "pm.test(\u0027Devuelve tres recetas\u0027, () =\u003e pm.expect(json.recomendaciones).to.have.lengthOf(3));",
+                                                                                    "pm.test(\u0027Cada receta incluye tags\u0027, () =\u003e json.recomendaciones.forEach(r =\u003e pm.expect(r.tags).to.be.an(\u0027array\u0027).that.is.not.empty));",
+                                                                                    "pm.test(\u0027Cada receta incluye pasos\u0027, () =\u003e json.recomendaciones.forEach(r =\u003e pm.expect(r.pasos).to.be.an(\u0027array\u0027).with.lengthOf.at.least(3)));",
+                                                                                    "pm.test(\u0027Cada receta incluye porciones e ingredientes\u0027, () =\u003e json.recomendaciones.forEach(r =\u003e { pm.expect(r.porciones).to.be.above(0); pm.expect(r.ingredientes).to.be.an(\u0027array\u0027).that.is.not.empty; }));",
+                                                                                    "pm.test(\u0027Informa la fuente\u0027, () =\u003e pm.expect([\u0027OLLAMA\u0027, \u0027BASE_DATOS\u0027]).to.include(json.fuente));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Consultar mi historial",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recomendaciones",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recomendaciones"
+                                                                           ]
+                                                              },
+                                                      "description":  "Devuelve solamente las recomendaciones creadas por el usuario autenticado, desde la mas reciente."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Historial consultado\u0027, () =\u003e pm.response.to.have.status(200));",
+                                                                                    "pm.test(\u0027Devuelve una lista\u0027, () =\u003e pm.expect(pm.response.json()).to.be.an(\u0027array\u0027));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Validacion - Animo invalido",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"animo\": \"DESCONOCIDO\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/recomendar",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "recomendar"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Solicitud invalida rechazada\u0027, () =\u003e pm.response.to.have.status(400));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "06 - Seguridad",
+                     "item":  [
+                                  {
+                                      "name":  "Sin token devuelve 401",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{gatewayUrl}}/api/usuarios/perfil",
+                                                                  "host":  [
+                                                                               "{{gatewayUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "usuarios",
+                                                                               "perfil"
+                                                                           ]
+                                                              }
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Endpoint protegido\u0027, () =\u003e pm.response.to.have.status(401));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  }
+                              ]
+                 }
+             ]
+}
