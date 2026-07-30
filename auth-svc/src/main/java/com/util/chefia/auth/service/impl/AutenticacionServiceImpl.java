@@ -4,6 +4,7 @@ import com.util.chefia.auth.dto.LoginRequest;
 import com.util.chefia.auth.dto.TokenResponse;
 import com.util.chefia.auth.mapper.KeycloakMapper;
 import com.util.chefia.auth.exception.CredencialesInvalidasException;
+import com.util.chefia.auth.exception.CambioContraseniaRequeridoException;
 import com.util.chefia.auth.service.AutenticacionService;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,8 +58,18 @@ public class AutenticacionServiceImpl implements AutenticacionService {
                 })
                 .map(mapper::aToken)
                 .onErrorMap(WebClientResponseException.BadRequest.class,
-                        error -> new CredencialesInvalidasException())
+                        this::traducirErrorLogin)
                 .onErrorMap(WebClientResponseException.Unauthorized.class,
                         error -> new CredencialesInvalidasException());
+    }
+
+    /** Distingue una clave temporal valida de credenciales realmente incorrectas. */
+    private RuntimeException traducirErrorLogin(WebClientResponseException.BadRequest error) {
+        String respuesta = error.getResponseBodyAsString().toLowerCase();
+        if (respuesta.contains("account is not fully set up")
+                || respuesta.contains("resolve_required_actions")) {
+            return new CambioContraseniaRequeridoException();
+        }
+        return new CredencialesInvalidasException();
     }
 }

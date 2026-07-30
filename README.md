@@ -107,6 +107,22 @@ Content-Type: application/json
 
 Los usuarios creados por ADMIN reciben una clave temporal. El frontend debe solicitar el cambio antes del login:
 
+El primer intento de login con la clave temporal correcta responde `401` con un
+codigo especial. Esto permite diferenciar una clave temporal de credenciales
+realmente incorrectas:
+
+```json
+{
+  "status": 401,
+  "code": "TEMPORARY_PASSWORD_REQUIRED",
+  "error": "Cambio de contrasenia requerido",
+  "message": "La cuenta utiliza una contrasenia temporal"
+}
+```
+
+Todavia no existe un JWT en este punto, por lo que el frontend no debe intentar
+detectar esta condicion mediante el rol. Debe utilizar el atributo `code`.
+
 ```http
 POST /api/auth/contrasenia-temporal
 ```

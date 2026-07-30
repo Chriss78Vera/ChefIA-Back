@@ -37,6 +37,18 @@ public class ApiExceptionHandler {
         return error(401, "Credenciales invalidas", "Usuario o contrasenia incorrectos");
     }
 
+    /** Permite al frontend abrir la pantalla obligatoria de cambio de clave. */
+    @ExceptionHandler(CambioContraseniaRequeridoException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    Map<String, Object> cambioContrasenia(CambioContraseniaRequeridoException ex) {
+        return Map.of(
+                "timestamp", Instant.now(),
+                "status", 401,
+                "code", "TEMPORARY_PASSWORD_REQUIRED",
+                "error", "Cambio de contrasenia requerido",
+                "message", ex.getMessage());
+    }
+
     /** Conserva el estado y la razón de los rechazos deliberados por reglas de negocio. */
     @ExceptionHandler(ResponseStatusException.class)
     org.springframework.http.ResponseEntity<Map<String, Object>> estado(ResponseStatusException ex) {
