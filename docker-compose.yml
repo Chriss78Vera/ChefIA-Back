@@ -1,0 +1,236 @@
+name: chefia
+
+x-db-environment: &db-environment
+  POSTGRES_USER: ${POSTGRES_USER:-chefia}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chefia_dev}
+
+x-db-healthcheck: &db-healthcheck
+  interval: 5s
+  timeout: 5s
+  retries: 20
+
+x-service-environment: &service-environment
+  SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-chefia}
+  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-chefia_dev}
+  JWT_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/chefia
+  JWT_JWK_SET_URI: http://keycloak:8080/realms/chefia/protocol/openid-connect/certs
+
+services:
+  keycloak-db:
+    container_name: chefia-keycloak-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_dev}
+    volumes: [keycloak-data:/var/lib/postgresql/data]
+    ports:
+      - "${KEYCLOAK_DB_PORT:-5439}:5432"
+    healthcheck:
+      <<: *db-healthcheck
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+    networks: [chefia-net]
+
+  keycloak:
+    container_name: chefia-keycloak
+    image: quay.io/keycloak/keycloak:26.2
+    command: ["start-dev", "--import-realm", "--health-enabled=true"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_dev}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./keycloak/chefia-realm.json:/opt/keycloak/data/import/chefia-realm.json:ro
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e 'GET /health/ready HTTP/1.1\\r\\nhost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep '200 OK' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks: [chefia-net]
+
+  usuarios-db:
+    container_name: chefia-usuarios-db
+    image: postgres:16-alpine
+    environment:
+      <<: *db-environment
+      POSTGRES_DB: chefia_usuarios
+    volumes: [usuarios-data:/var/lib/postgresql/data]
+    ports:
+      - "${USUARIOS_DB_PORT:-5436}:5432"
+    healthcheck:
+      <<: *db-healthcheck
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chefia} -d chefia_usuarios"]
+    networks: [chefia-net]
+
+  recetas-db:
+    container_name: chefia-recetas-db
+    image: postgres:16-alpine
+    environment:
+      <<: *db-environment
+      POSTGRES_DB: chefia_recetas
+    volumes: [recetas-data:/var/lib/postgresql/data]
+    ports:
+      - "${RECETAS_DB_PORT:-5437}:5432"
+    healthcheck:
+      <<: *db-healthcheck
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chefia} -d chefia_recetas"]
+    networks: [chefia-net]
+
+  favoritos-db:
+    container_name: chefia-favoritos-db
+    image: postgres:16-alpine
+    environment:
+      <<: *db-environment
+      POSTGRES_DB: chefia_favoritos
+    volumes: [favoritos-data:/var/lib/postgresql/data]
+    ports:
+      - "${FAVORITOS_DB_PORT:-5438}:5432"
+    healthcheck:
+      <<: *db-healthcheck
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chefia} -d chefia_favoritos"]
+    networks: [chefia-net]
+
+  recomendaciones-db:
+    container_name: chefia-recomendaciones-db
+    image: postgres:16-alpine
+    environment:
+      <<: *db-environment
+      POSTGRES_DB: chefia_recomendaciones
+    ports:
+      - "${RECOMENDACIONES_DB_PORT:-5435}:5432"
+    volumes: [recomendaciones-data:/var/lib/postgresql/data]
+    healthcheck:
+      <<: *db-healthcheck
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chefia} -d chefia_recomendaciones"]
+    networks: [chefia-net]
+
+  usuarios-svc:
+    container_name: chefia-usuarios-svc
+    build:
+      context: ./usuarios-svc
+    environment:
+      <<: *service-environment
+      SPRING_DATASOURCE_URL: jdbc:postgresql://usuarios-db:5432/chefia_usuarios
+    depends_on:
+      usuarios-db: {condition: service_healthy}
+      keycloak: {condition: service_healthy}
+    healthcheck: &app-healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    expose: ["8080"]
+    networks: [chefia-net]
+
+  auth-svc:
+    container_name: chefia-auth-svc
+    build:
+      context: ./auth-svc
+    environment:
+      JWT_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/chefia
+      JWT_JWK_SET_URI: http://keycloak:8080/realms/chefia/protocol/openid-connect/certs
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_PUBLIC_URL: http://host.docker.internal:${KEYCLOAK_PORT:-8180}
+      KEYCLOAK_PUBLIC_HOST: localhost:${KEYCLOAK_PORT:-8180}
+      KEYCLOAK_REALM: chefia
+      KEYCLOAK_PUBLIC_CLIENT_ID: chefia-app
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    depends_on:
+      keycloak: {condition: service_healthy}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck: *app-healthcheck
+    expose: ["8080"]
+    networks: [chefia-net]
+
+  recetas-svc:
+    container_name: chefia-recetas-svc
+    build:
+      context: ./recetas-svc
+    environment:
+      <<: *service-environment
+      SPRING_DATASOURCE_URL: jdbc:postgresql://recetas-db:5432/chefia_recetas
+    depends_on:
+      recetas-db: {condition: service_healthy}
+      keycloak: {condition: service_healthy}
+    healthcheck: *app-healthcheck
+    expose: ["8080"]
+    networks: [chefia-net]
+
+  favoritos-svc:
+    container_name: chefia-favoritos-svc
+    build:
+      context: ./favoritos-svc
+    environment:
+      <<: *service-environment
+      SPRING_DATASOURCE_URL: jdbc:postgresql://favoritos-db:5432/chefia_favoritos
+      RECETAS_SERVICE_URL: http://recetas-svc:8080
+    depends_on:
+      favoritos-db: {condition: service_healthy}
+      recetas-svc: {condition: service_healthy}
+    healthcheck: *app-healthcheck
+    expose: ["8080"]
+    networks: [chefia-net]
+
+  recomendaciones-svc:
+    container_name: chefia-recomendaciones-svc
+    build:
+      context: ./recomendaciones-svc
+    environment:
+      <<: *service-environment
+      SPRING_DATASOURCE_URL: jdbc:postgresql://recomendaciones-db:5432/chefia_recomendaciones
+      USUARIOS_SERVICE_URL: http://usuarios-svc:8080
+      RECETAS_SERVICE_URL: http://recetas-svc:8080
+      FAVORITOS_SERVICE_URL: http://favoritos-svc:8080
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      recomendaciones-db: {condition: service_healthy}
+      usuarios-svc: {condition: service_healthy}
+      recetas-svc: {condition: service_healthy}
+      favoritos-svc: {condition: service_healthy}
+    healthcheck: *app-healthcheck
+    expose: ["8080"]
+    networks: [chefia-net]
+
+  nginx:
+    container_name: chefia-nginx
+    image: nginx:1.27-alpine
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      auth-svc: {condition: service_healthy}
+      usuarios-svc: {condition: service_healthy}
+      recetas-svc: {condition: service_healthy}
+      favoritos-svc: {condition: service_healthy}
+      recomendaciones-svc: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep -q ok"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [chefia-net]
+
+volumes:
+  keycloak-data:
+  usuarios-data:
+  recetas-data:
+  favoritos-data:
+  recomendaciones-data:
+
+networks:
+  chefia-net:
+    driver: bridge
