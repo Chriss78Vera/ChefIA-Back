@@ -17,6 +17,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono;
 
 @Service
+/** Implementa el login enviando las credenciales al endpoint de tokens del realm ChefIA. */
 public class AutenticacionServiceImpl implements AutenticacionService {
     private final WebClient keycloak;
     private final KeycloakMapper mapper;
@@ -39,6 +40,7 @@ public class AutenticacionServiceImpl implements AutenticacionService {
     }
 
     @Override
+    /** Construye una solicitud password grant y transforma la respuesta genérica en TokenResponse. */
     public Mono<TokenResponse> login(LoginRequest request) {
         var form = new LinkedMultiValueMap<String, String>();
         form.add("grant_type", "password");

@@ -24,6 +24,7 @@ import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/auth")
+/** Publica los flujos de acceso, registro y cambio de contraseña. */
 public class AuthController {
     private final AutenticacionService service;
     private final KeycloakAdminService usuarios;
@@ -37,23 +38,27 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    /** Intercambia credenciales válidas por los tokens emitidos por Keycloak. */
     public Mono<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         return service.login(request);
     }
 
     @PostMapping("/registro")
     @ResponseStatus(HttpStatus.CREATED)
+    /** Registra una cuenta normal con contraseña definitiva y rol USUARIO. */
     public Mono<UsuarioCreadoResponse> registrar(@Valid @RequestBody CrearUsuarioRequest request) {
         return usuarios.crear(request);
     }
 
     @PostMapping("/contrasenia-temporal")
+    /** Permite completar el primer ingreso de una cuenta creada por un administrador. */
     public Mono<MensajeResponse> cambiarTemporal(
             @Valid @RequestBody CambioContraseniaTemporalRequest request) {
         return contrasenias.cambiarTemporal(request);
     }
 
     @PutMapping("/contrasenia")
+    /** Cambia la contraseña de la identidad indicada por el JWT y verifica primero la clave actual. */
     public Mono<MensajeResponse> cambiar(@AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CambioContraseniaRequest request) {
         return contrasenias.cambiar(jwt.getSubject(), jwt.getClaimAsString("preferred_username"), request);

@@ -24,6 +24,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono;
 
 @Service
+/** Centraliza las operaciones sobre usuarios y roles mediante la API administrativa de Keycloak. */
 public class KeycloakAdminServiceImpl implements KeycloakAdminService {
     private final WebClient keycloak;
     private final KeycloakMapper mapper;
@@ -46,15 +47,18 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
     }
 
     @Override
+    /** Crea una cuenta pública con contraseña definitiva. */
     public Mono<UsuarioCreadoResponse> crear(CrearUsuarioRequest request) {
         return crear(request, false);
     }
 
     @Override
+    /** Crea desde administración una cuenta obligada a cambiar su contraseña temporal. */
     public Mono<UsuarioCreadoResponse> crearTemporal(CrearUsuarioRequest request) {
         return crear(request, true);
     }
 
+    /** Comparte el alta, asigna USUARIO y traduce conflictos de username o correo. */
     private Mono<UsuarioCreadoResponse> crear(CrearUsuarioRequest request, boolean temporal) {
         return tokenAdmin()
                 .flatMap(token -> keycloak.post()
@@ -73,6 +77,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
     }
 
     @Override
+    /** Consulta las identidades y descarta las que tengan el rol ADMIN. */
     public Mono<List<UsuarioAdminResponse>> listarUsuariosNormales() {
         return tokenAdmin().flatMapMany(token -> usuarios(token)
                 .flatMapMany(Flux::fromIterable)
@@ -83,6 +88,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
     }
 
     @Override
+    /** Cambia enabled después de comprobar que el objetivo no sea administrador. */
     public Mono<UsuarioAdminResponse> cambiarEstado(String userId, boolean activo) {
         return tokenAdmin().flatMap(token -> usuario(token, userId)
                 .zipWith(roles(token, userId))
@@ -100,6 +106,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
                 }));
     }
 
+    /** Obtiene todas las representaciones de usuario del realm. */
     private Mono<List<Map<String, Object>>> usuarios(String token) {
         return keycloak.get().uri("/admin/realms/{realm}/users", realm)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).retrieve()
@@ -107,6 +114,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
                 });
     }
 
+    /** Obtiene una identidad concreta por su identificador interno de Keycloak. */
     private Mono<Map<String, Object>> usuario(String token, String id) {
         return keycloak.get().uri("/admin/realms/{realm}/users/{id}", realm, id)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).retrieve()
@@ -114,6 +122,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
                 });
     }
 
+    /** Consulta los roles de realm asignados directamente a una identidad. */
     private Mono<List<Map<String, Object>>> roles(String token, String id) {
         return keycloak.get().uri("/admin/realms/{realm}/users/{id}/role-mappings/realm", realm, id)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token).retrieve()
@@ -121,25 +130,30 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
                 });
     }
 
+    /** Determina si la colección contiene el rol protegido ADMIN. */
     private boolean esAdmin(List<Map<String, Object>> roles) {
         return roles.stream().anyMatch(role -> "ADMIN".equals(String.valueOf(role.get("name"))));
     }
 
+    /** Proyecta únicamente los datos seguros requeridos por la pantalla administrativa. */
     private UsuarioAdminResponse aResponse(Map<String, Object> usuario) {
         return new UsuarioAdminResponse(id(usuario), texto(usuario, "username"), texto(usuario, "email"),
                 texto(usuario, "firstName"), texto(usuario, "lastName"),
                 Boolean.TRUE.equals(usuario.get("enabled")));
     }
 
+    /** Extrae el identificador de una representación de usuario. */
     private String id(Map<String, Object> usuario) {
         return texto(usuario, "id");
     }
 
+    /** Convierte campos opcionales a texto vacío para evitar valores nulos en la API. */
     private String texto(Map<String, Object> usuario, String campo) {
         Object value = usuario.get(campo);
         return value == null ? "" : String.valueOf(value);
     }
 
+    /** Recupera la definición de USUARIO y la asigna a la cuenta recién creada. */
     private Mono<Void> asignarRolUsuario(String token, String userId) {
         return keycloak.get()
                 .uri("/admin/realms/{realm}/roles/USUARIO", realm)
@@ -157,6 +171,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
                 .then();
     }
 
+    /** Solicita a master un token de admin-cli usado solo dentro del microservicio. */
     private Mono<String> tokenAdmin() {
         var form = new LinkedMultiValueMap<String, String>();
         form.add("client_id", "admin-cli");
@@ -173,6 +188,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
                 .map(response -> String.valueOf(response.get("access_token")));
     }
 
+    /** Obtiene el ID creado desde la cabecera Location devuelta por Keycloak. */
     private String extraerId(URI location) {
         if (location == null) {
             throw new IllegalStateException("Keycloak no devolvio el identificador del usuario");

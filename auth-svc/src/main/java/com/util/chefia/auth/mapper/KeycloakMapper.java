@@ -7,7 +7,9 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 @Component
+/** Adapta los DTO propios al formato de la API administrativa y de tokens de Keycloak. */
 public class KeycloakMapper {
+    /** Construye la representación de usuario y decide si la credencial exige UPDATE_PASSWORD. */
     public Map<String, Object> aUsuario(CrearUsuarioRequest request, boolean temporal) {
         return Map.of(
                 "username", request.username(),
@@ -24,6 +26,7 @@ public class KeycloakMapper {
                         "temporary", temporal)));
     }
 
+    /** Convierte la respuesta genérica del endpoint OIDC en un contrato tipado para el frontend. */
     public TokenResponse aToken(Map<String, Object> response) {
         return new TokenResponse(
                 String.valueOf(response.get("access_token")),
@@ -33,6 +36,7 @@ public class KeycloakMapper {
                 String.valueOf(response.get("token_type")));
     }
 
+    /** Lee de forma segura los tiempos de expiración devueltos como valores numéricos. */
     private long numero(Object value) {
         return value instanceof Number number ? number.longValue() : 0L;
     }

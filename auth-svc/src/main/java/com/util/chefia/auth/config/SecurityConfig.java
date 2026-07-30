@@ -16,7 +16,9 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 
 @Configuration
 @EnableReactiveMethodSecurity
+/** Configura el servicio como Resource Server y traduce los roles del realm a autoridades de Spring. */
 public class SecurityConfig {
+    /** Declara las rutas públicas; cualquier otra operación exige un JWT válido. */
     @Bean
     SecurityWebFilterChain security(ServerHttpSecurity http) {
         return http
@@ -30,6 +32,7 @@ public class SecurityConfig {
                 .build();
     }
 
+    /** Convierte realm_access.roles de Keycloak a autoridades con el prefijo ROLE_. */
     private Converter<Jwt, ? extends reactor.core.publisher.Mono<? extends AbstractAuthenticationToken>> converter() {
         return jwt -> {
             Map<String, Object> access = jwt.getClaimAsMap("realm_access");

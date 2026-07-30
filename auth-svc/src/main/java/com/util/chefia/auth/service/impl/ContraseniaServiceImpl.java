@@ -25,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 @Service
+/** Gestiona credenciales en Keycloak sin almacenar contraseñas en bases propias. */
 public class ContraseniaServiceImpl implements ContraseniaService {
     private static final String UPDATE_PASSWORD = "UPDATE_PASSWORD";
 
@@ -55,6 +56,7 @@ public class ContraseniaServiceImpl implements ContraseniaService {
     }
 
     @Override
+    /** Verifica confirmación, diferencia y clave actual antes de registrar una credencial definitiva. */
     public Mono<MensajeResponse> cambiar(
             String userId, String username, CambioContraseniaRequest request) {
         validarConfirmacion(request.contraseniaNueva(), request.confirmacionContrasenia());
@@ -66,6 +68,7 @@ public class ContraseniaServiceImpl implements ContraseniaService {
     }
 
     @Override
+    /** Sustituye una clave temporal únicamente cuando la cuenta conserva UPDATE_PASSWORD. */
     public Mono<MensajeResponse> cambiarTemporal(CambioContraseniaTemporalRequest request) {
         validarConfirmacion(request.contraseniaNueva(), request.confirmacionContrasenia());
         validarDiferente(request.contraseniaTemporal(), request.contraseniaNueva());
@@ -81,17 +84,20 @@ public class ContraseniaServiceImpl implements ContraseniaService {
                                 "El usuario no tiene un cambio de contrasenia temporal pendiente"));
                     }
 
+                    // Keycloak bloquea el password grant mientras UPDATE_PASSWORD sigue pendiente.
                     Map<String, Object> sinAccion = conAccionCambio(usuario, false);
                     return actualizarUsuario(token, userId, sinAccion)
                             .then(validarCredenciales(request.username(), request.contraseniaTemporal()))
                             .then(cambiarCredencial(token, userId, request.contraseniaNueva()))
                             .thenReturn(new MensajeResponse("Contrasenia temporal actualizada correctamente"))
+                            // Si falla la comprobación o el cambio, se intenta restaurar la acción original.
                             .onErrorResume(error -> actualizarUsuario(token, userId, usuario)
                                     .onErrorResume(ignorado -> Mono.empty())
                                     .then(Mono.error(error)));
                 }));
     }
 
+    /** Busca una coincidencia exacta para evitar operar sobre usuarios con nombres parecidos. */
     private Mono<Map<String, Object>> buscarPorUsername(String token, String username) {
         return keycloakAdmin.get()
                 .uri(uri -> uri.path("/admin/realms/{realm}/users")
@@ -105,6 +111,7 @@ public class ContraseniaServiceImpl implements ContraseniaService {
                         : Mono.error(new ResponseStatusException(NOT_FOUND, "Usuario no encontrado")));
     }
 
+    /** Comprueba una contraseña mediante el endpoint OIDC sin conservar el token obtenido. */
     private Mono<Void> validarCredenciales(String username, String password) {
         var form = new LinkedMultiValueMap<String, String>();
         form.add("grant_type", "password");
@@ -125,6 +132,7 @@ public class ContraseniaServiceImpl implements ContraseniaService {
                         error -> new CredencialesInvalidasException());
     }
 
+    /** Registra la nueva credencial como definitiva usando reset-password de la API administrativa. */
     private Mono<Void> cambiarCredencial(String token, String userId, String password) {
         return keycloakAdmin.put()
                 .uri("/admin/realms/{realm}/users/{id}/reset-password", realm, userId)
@@ -139,6 +147,7 @@ public class ContraseniaServiceImpl implements ContraseniaService {
                                 "La nueva contrasenia no cumple la politica de Keycloak"));
     }
 
+    /** Persiste cambios generales de la representación del usuario en Keycloak. */
     private Mono<Void> actualizarUsuario(String token, String userId, Map<String, Object> usuario) {
         return keycloakAdmin.put()
                 .uri("/admin/realms/{realm}/users/{id}", realm, userId)
@@ -150,6 +159,7 @@ public class ContraseniaServiceImpl implements ContraseniaService {
                 .then();
     }
 
+    /** Devuelve una copia de la identidad agregando o retirando UPDATE_PASSWORD. */
     private Map<String, Object> conAccionCambio(Map<String, Object> usuario, boolean incluir) {
         Map<String, Object> copia = new LinkedHashMap<>(usuario);
         List<String> acciones = new ArrayList<>(acciones(usuario));
@@ -160,6 +170,7 @@ public class ContraseniaServiceImpl implements ContraseniaService {
         return copia;
     }
 
+    /** Normaliza requiredActions para trabajar siempre con una lista de textos. */
     private List<String> acciones(Map<String, Object> usuario) {
         Object value = usuario.get("requiredActions");
         if (!(value instanceof List<?> lista))
@@ -167,6 +178,7 @@ public class ContraseniaServiceImpl implements ContraseniaService {
         return lista.stream().map(String::valueOf).toList();
     }
 
+    /** Obtiene un token técnico de admin-cli para ejecutar operaciones administrativas. */
     private Mono<String> tokenAdmin() {
         var form = new LinkedMultiValueMap<String, String>();
         form.add("client_id", "admin-cli");
@@ -183,12 +195,14 @@ public class ContraseniaServiceImpl implements ContraseniaService {
                 .map(response -> String.valueOf(response.get("access_token")));
     }
 
+    /** Impide continuar cuando la confirmación no coincide con la nueva contraseña. */
     private void validarConfirmacion(String nueva, String confirmacion) {
         if (!nueva.equals(confirmacion)) {
             throw new ResponseStatusException(BAD_REQUEST, "La confirmacion no coincide");
         }
     }
 
+    /** Exige que la nueva contraseña sea diferente de la anterior o temporal. */
     private void validarDiferente(String actual, String nueva) {
         if (actual.equals(nueva)) {
             throw new ResponseStatusException(BAD_REQUEST,
@@ -196,6 +210,7 @@ public class ContraseniaServiceImpl implements ContraseniaService {
         }
     }
 
+    /** Extrae de forma segura un campo textual de una representación genérica de Keycloak. */
     private String texto(Map<String, Object> datos, String campo) {
         Object value = datos.get(campo);
         return value == null ? "" : String.valueOf(value);

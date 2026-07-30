@@ -21,6 +21,7 @@ import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/admin/usuarios")
+/** Expone operaciones administrativas sobre cuentas normales de Keycloak. */
 public class AdminUserController {
     private final KeycloakAdminService service;
 
@@ -31,18 +32,21 @@ public class AdminUserController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
+    /** Crea un usuario con contraseña temporal y cambio obligatorio en su primer acceso. */
     public Mono<UsuarioCreadoResponse> crear(@Valid @RequestBody CrearUsuarioRequest request) {
         return service.crearTemporal(request);
     }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
+    /** Lista únicamente cuentas que no poseen el rol ADMIN. */
     public Mono<List<UsuarioAdminResponse>> listar() {
         return service.listarUsuariosNormales();
     }
 
     @PatchMapping("/{id}/estado")
     @PreAuthorize("hasRole('ADMIN')")
+    /** Activa o desactiva una cuenta sin eliminarla de Keycloak. */
     public Mono<UsuarioAdminResponse> cambiarEstado(@PathVariable String id,
             @Valid @RequestBody EstadoUsuarioRequest request) {
         return service.cambiarEstado(id, request.activo());
