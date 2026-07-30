@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RecomendacionCacheService {
- void guardar(String usuarioSub, Animo animo, TipoReceta tipoReceta, String preferencia, List<Item> recomendaciones);
- Optional<List<Item>> buscarUltima(String usuarioSub, Animo animo, TipoReceta tipoReceta, String preferencia);
- List<HistorialResponse> listar(String usuarioSub);
+    void guardar(String usuarioSub, Animo animo, TipoReceta tipoReceta, String preferencia, List<Item> recomendaciones);
+
+    Optional<List<Item>> buscarUltima(String usuarioSub, Animo animo, TipoReceta tipoReceta, String preferencia);
+
+    List<HistorialResponse> listar(String usuarioSub);
 }

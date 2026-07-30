@@ -22,8 +22,8 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     Map<String, Object> validacion(WebExchangeBindException ex) {
         var messages = ex.getFieldErrors().stream()
-            .map(error -> error.getField() + ": " + error.getDefaultMessage())
-            .toList();
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .toList();
         return error(400, "Solicitud invalida", messages);
     }
 
@@ -37,10 +37,10 @@ public class ApiExceptionHandler {
     org.springframework.http.ResponseEntity<Map<String, Object>> estado(ResponseStatusException ex) {
         int status = ex.getStatusCode().value();
         return org.springframework.http.ResponseEntity.status(ex.getStatusCode())
-            .body(error(status, "Solicitud rechazada", ex.getReason()));
+                .body(error(status, "Solicitud rechazada", ex.getReason()));
     }
 
-    @ExceptionHandler({IllegalStateException.class, WebClientResponseException.ServiceUnavailable.class})
+    @ExceptionHandler({ IllegalStateException.class, WebClientResponseException.ServiceUnavailable.class })
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     Map<String, Object> keycloak(Exception ex) {
         return error(503, "Keycloak no disponible", ex.getMessage());
@@ -50,4 +50,3 @@ public class ApiExceptionHandler {
         return Map.of("timestamp", Instant.now(), "status", status, "error", name, "message", message);
     }
 }
-

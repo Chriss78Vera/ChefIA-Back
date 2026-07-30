@@ -5,4 +5,3 @@ public class UsuarioDuplicadoException extends RuntimeException {
         super(message);
     }
 }
-

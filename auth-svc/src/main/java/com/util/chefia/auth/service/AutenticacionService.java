@@ -7,4 +7,3 @@ import reactor.core.publisher.Mono;
 public interface AutenticacionService {
     Mono<TokenResponse> login(LoginRequest request);
 }
-

@@ -8,5 +8,6 @@ import com.util.chefia.recomendaciones.dto.RecomendacionDto.TipoReceta;
 import java.util.List;
 
 public interface OllamaService {
- List<Item> recomendar(Animo animo,TipoReceta tipoReceta,UsuariosClient.Preferencias pref,List<RecetasClient.RecetaCandidata> recetas,int cantidad);
+    List<Item> recomendar(Animo animo, TipoReceta tipoReceta, UsuariosClient.Preferencias pref,
+            List<RecetasClient.RecetaCandidata> recetas, int cantidad);
 }

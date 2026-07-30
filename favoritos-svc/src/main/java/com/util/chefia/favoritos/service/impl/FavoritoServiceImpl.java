@@ -12,27 +12,34 @@ import static org.springframework.http.HttpStatus.*;
 
 @Service
 public class FavoritoServiceImpl implements FavoritoService {
- private final FavoritoRepository repository;
- private final RecetasClient recetas;
+    private final FavoritoRepository repository;
+    private final RecetasClient recetas;
 
- public FavoritoServiceImpl(FavoritoRepository repository,RecetasClient recetas){this.repository=repository;this.recetas=recetas;}
+    public FavoritoServiceImpl(FavoritoRepository repository, RecetasClient recetas) {
+        this.repository = repository;
+        this.recetas = recetas;
+    }
 
- @Override
- @Transactional(readOnly=true)
- public List<Favorito> listar(String sub){return repository.findByUsuarioSubOrderByCreadoEnDesc(sub);}
+    @Override
+    @Transactional(readOnly = true)
+    public List<Favorito> listar(String sub) {
+        return repository.findByUsuarioSubOrderByCreadoEnDesc(sub);
+    }
 
- @Override
- @Transactional
- public Favorito agregar(String sub,Long id,String token){
-  if(repository.findByUsuarioSubAndRecetaId(sub,id).isPresent())throw new ResponseStatusException(CONFLICT,"La receta ya esta en favoritos");
-  var receta=recetas.obtener(id,token);
-  return repository.save(new Favorito(sub,id,receta.nombre()));
- }
+    @Override
+    @Transactional
+    public Favorito agregar(String sub, Long id, String token) {
+        if (repository.findByUsuarioSubAndRecetaId(sub, id).isPresent())
+            throw new ResponseStatusException(CONFLICT, "La receta ya esta en favoritos");
+        var receta = recetas.obtener(id, token);
+        return repository.save(new Favorito(sub, id, receta.nombre()));
+    }
 
- @Override
- @Transactional
- public void eliminar(String sub,Long id){
-  var favorito=repository.findByUsuarioSubAndRecetaId(sub,id).orElseThrow(()->new ResponseStatusException(NOT_FOUND,"Favorito no encontrado"));
-  repository.delete(favorito);
- }
+    @Override
+    @Transactional
+    public void eliminar(String sub, Long id) {
+        var favorito = repository.findByUsuarioSubAndRecetaId(sub, id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Favorito no encontrado"));
+        repository.delete(favorito);
+    }
 }

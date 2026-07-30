@@ -30,7 +30,7 @@ public class AuthController {
     private final ContraseniaService contrasenias;
 
     public AuthController(AutenticacionService service, KeycloakAdminService usuarios,
-        ContraseniaService contrasenias) {
+            ContraseniaService contrasenias) {
         this.service = service;
         this.usuarios = usuarios;
         this.contrasenias = contrasenias;
@@ -49,14 +49,13 @@ public class AuthController {
 
     @PostMapping("/contrasenia-temporal")
     public Mono<MensajeResponse> cambiarTemporal(
-        @Valid @RequestBody CambioContraseniaTemporalRequest request) {
+            @Valid @RequestBody CambioContraseniaTemporalRequest request) {
         return contrasenias.cambiarTemporal(request);
     }
 
     @PutMapping("/contrasenia")
     public Mono<MensajeResponse> cambiar(@AuthenticationPrincipal Jwt jwt,
-        @Valid @RequestBody CambioContraseniaRequest request) {
+            @Valid @RequestBody CambioContraseniaRequest request) {
         return contrasenias.cambiar(jwt.getSubject(), jwt.getClaimAsString("preferred_username"), request);
     }
 }
-

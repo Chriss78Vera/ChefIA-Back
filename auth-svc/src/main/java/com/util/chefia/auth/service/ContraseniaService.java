@@ -7,5 +7,6 @@ import reactor.core.publisher.Mono;
 
 public interface ContraseniaService {
     Mono<MensajeResponse> cambiar(String userId, String username, CambioContraseniaRequest request);
+
     Mono<MensajeResponse> cambiarTemporal(CambioContraseniaTemporalRequest request);
 }

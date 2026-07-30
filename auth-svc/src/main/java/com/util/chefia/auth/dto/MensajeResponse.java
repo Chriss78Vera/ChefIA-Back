@@ -1,3 +1,4 @@
 package com.util.chefia.auth.dto;
 
-public record MensajeResponse(String mensaje) {}
+public record MensajeResponse(String mensaje) {
+}

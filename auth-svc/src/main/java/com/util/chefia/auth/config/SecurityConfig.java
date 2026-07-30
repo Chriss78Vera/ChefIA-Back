@@ -20,13 +20,14 @@ public class SecurityConfig {
     @Bean
     SecurityWebFilterChain security(ServerHttpSecurity http) {
         return http
-            .csrf(ServerHttpSecurity.CsrfSpec::disable)
-            .authorizeExchange(auth -> auth
-                .pathMatchers("/api/auth/login", "/api/auth/registro",
-                    "/api/auth/contrasenia-temporal", "/actuator/health/**").permitAll()
-                .anyExchange().authenticated())
-            .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter())))
-            .build();
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .authorizeExchange(auth -> auth
+                        .pathMatchers("/api/auth/login", "/api/auth/registro",
+                                "/api/auth/contrasenia-temporal", "/actuator/health/**")
+                        .permitAll()
+                        .anyExchange().authenticated())
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter())))
+                .build();
     }
 
     private Converter<Jwt, ? extends reactor.core.publisher.Mono<? extends AbstractAuthenticationToken>> converter() {
@@ -34,12 +35,11 @@ public class SecurityConfig {
             Map<String, Object> access = jwt.getClaimAsMap("realm_access");
             Collection<?> roles = access == null ? List.of() : (Collection<?>) access.getOrDefault("roles", List.of());
             var authorities = roles.stream()
-                .map(String::valueOf)
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                .toList();
+                    .map(String::valueOf)
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .toList();
             return reactor.core.publisher.Mono.just(
-                new JwtAuthenticationToken(jwt, authorities, jwt.getClaimAsString("preferred_username")));
+                    new JwtAuthenticationToken(jwt, authorities, jwt.getClaimAsString("preferred_username")));
         };
     }
 }
-

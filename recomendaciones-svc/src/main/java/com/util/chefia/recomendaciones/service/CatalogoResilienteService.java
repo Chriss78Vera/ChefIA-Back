@@ -5,5 +5,5 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface CatalogoResilienteService {
- CompletableFuture<List<RecetasClient.RecetaCandidata>> candidatas(String tipo,String authorization);
+    CompletableFuture<List<RecetasClient.RecetaCandidata>> candidatas(String tipo, String authorization);
 }

@@ -25,13 +25,12 @@ public class AutenticacionServiceImpl implements AutenticacionService {
     private final String publicHost;
 
     public AutenticacionServiceImpl(
-        WebClient.Builder builder,
-        KeycloakMapper mapper,
-        @Value("${keycloak.public-url}") String baseUrl,
-        @Value("${keycloak.public-host}") String publicHost,
-        @Value("${keycloak.realm}") String realm,
-        @Value("${keycloak.public-client-id}") String clientId
-    ) {
+            WebClient.Builder builder,
+            KeycloakMapper mapper,
+            @Value("${keycloak.public-url}") String baseUrl,
+            @Value("${keycloak.public-host}") String publicHost,
+            @Value("${keycloak.realm}") String realm,
+            @Value("${keycloak.public-client-id}") String clientId) {
         this.keycloak = builder.baseUrl(baseUrl).build();
         this.mapper = mapper;
         this.publicHost = publicHost;
@@ -47,17 +46,17 @@ public class AutenticacionServiceImpl implements AutenticacionService {
         form.add("username", request.username());
         form.add("password", request.password());
         return keycloak.post()
-            .uri("/realms/{realm}/protocol/openid-connect/token", realm)
-            .header(HttpHeaders.HOST, publicHost)
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .bodyValue(form)
-            .retrieve()
-            .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-            .map(mapper::aToken)
-            .onErrorMap(WebClientResponseException.BadRequest.class,
-                error -> new CredencialesInvalidasException())
-            .onErrorMap(WebClientResponseException.Unauthorized.class,
-                error -> new CredencialesInvalidasException());
+                .uri("/realms/{realm}/protocol/openid-connect/token", realm)
+                .header(HttpHeaders.HOST, publicHost)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .bodyValue(form)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {
+                })
+                .map(mapper::aToken)
+                .onErrorMap(WebClientResponseException.BadRequest.class,
+                        error -> new CredencialesInvalidasException())
+                .onErrorMap(WebClientResponseException.Unauthorized.class,
+                        error -> new CredencialesInvalidasException());
     }
 }
-

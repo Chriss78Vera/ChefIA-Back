@@ -8,8 +8,10 @@ import reactor.core.publisher.Mono;
 
 public interface KeycloakAdminService {
     Mono<UsuarioCreadoResponse> crear(CrearUsuarioRequest request);
+
     Mono<UsuarioCreadoResponse> crearTemporal(CrearUsuarioRequest request);
+
     Mono<List<UsuarioAdminResponse>> listarUsuariosNormales();
+
     Mono<UsuarioAdminResponse> cambiarEstado(String id, boolean activo);
 }
-

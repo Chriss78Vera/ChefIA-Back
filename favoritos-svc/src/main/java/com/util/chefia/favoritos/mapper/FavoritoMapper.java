@@ -8,12 +8,9 @@ import org.springframework.stereotype.Component;
 public class FavoritoMapper {
     public FavoritoResponse aResponse(Favorito favorito) {
         return new FavoritoResponse(
-            favorito.getId(),
-            favorito.getRecetaId(),
-            favorito.getRecetaNombre(),
-            favorito.getCreadoEn()
-        );
+                favorito.getId(),
+                favorito.getRecetaId(),
+                favorito.getRecetaNombre(),
+                favorito.getCreadoEn());
     }
 }
-
-

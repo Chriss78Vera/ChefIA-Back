@@ -44,8 +44,7 @@ public class AdminUserController {
     @PatchMapping("/{id}/estado")
     @PreAuthorize("hasRole('ADMIN')")
     public Mono<UsuarioAdminResponse> cambiarEstado(@PathVariable String id,
-        @Valid @RequestBody EstadoUsuarioRequest request) {
+            @Valid @RequestBody EstadoUsuarioRequest request) {
         return service.cambiarEstado(id, request.activo());
     }
 }
-
