@@ -18,16 +18,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/admin/usuarios")
+@RequiredArgsConstructor
 /** Expone operaciones administrativas sobre cuentas normales de Keycloak. */
 public class AdminUserController {
     private final KeycloakAdminService service;
-
-    public AdminUserController(KeycloakAdminService service) {
-        this.service = service;
-    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

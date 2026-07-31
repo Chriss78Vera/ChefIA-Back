@@ -14,8 +14,10 @@ import com.util.chefia.recomendaciones.service.RecomendacionCacheService;
 import com.util.chefia.recomendaciones.service.RecomendacionService;
 import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class RecomendacionServiceImpl implements RecomendacionService {
   private final UsuariosClient usuarios;
   private final CatalogoResilienteService catalogo;
@@ -24,18 +26,6 @@ public class RecomendacionServiceImpl implements RecomendacionService {
   private final RecetasClient recetas;
   private final FavoritosClient favoritos;
   private final RecomendacionMapper mapper;
-
-  public RecomendacionServiceImpl(UsuariosClient usuarios, CatalogoResilienteService catalogo,
-      OllamaService ollama, RecomendacionCacheService cache, RecetasClient recetas,
-      FavoritosClient favoritos, RecomendacionMapper mapper) {
-    this.usuarios = usuarios;
-    this.catalogo = catalogo;
-    this.ollama = ollama;
-    this.cache = cache;
-    this.recetas = recetas;
-    this.favoritos = favoritos;
-    this.mapper = mapper;
-  }
 
   @Override
   public Response recomendar(Animo animo, TipoReceta tipoReceta, String usuarioSub, String accessToken) {

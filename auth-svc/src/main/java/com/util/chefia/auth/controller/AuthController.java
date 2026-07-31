@@ -21,21 +21,16 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PutMapping;
 import reactor.core.publisher.Mono;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 /** Publica los flujos de acceso, registro y cambio de contraseña. */
 public class AuthController {
     private final AutenticacionService service;
     private final KeycloakAdminService usuarios;
     private final ContraseniaService contrasenias;
-
-    public AuthController(AutenticacionService service, KeycloakAdminService usuarios,
-            ContraseniaService contrasenias) {
-        this.service = service;
-        this.usuarios = usuarios;
-        this.contrasenias = contrasenias;
-    }
 
     @PostMapping("/login")
     /** Intercambia credenciales válidas por los tokens emitidos por Keycloak. */

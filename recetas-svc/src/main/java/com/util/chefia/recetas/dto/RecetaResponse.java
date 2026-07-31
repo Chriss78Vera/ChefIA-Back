@@ -11,6 +11,7 @@ public record RecetaResponse(
         Dificultad dificultad,
         TipoAlimentacion tipoAlimentacion,
         Set<String> ingredientes,
+        String ingredienteAditional,
         Integer porciones,
         java.util.List<String> pasos,
         Set<String> tags,

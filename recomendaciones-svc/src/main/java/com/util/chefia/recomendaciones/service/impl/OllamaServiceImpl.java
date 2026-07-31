@@ -9,13 +9,13 @@ import io.github.resilience4j.retry.annotation.Retry;
 import java.text.Normalizer;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.slf4j.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class OllamaServiceImpl implements OllamaService {
-   private static final Logger log = LoggerFactory.getLogger(OllamaServiceImpl.class);
    private final WebClient client;
    private final ObjectMapper mapper;
    private final String model;

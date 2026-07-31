@@ -1,10 +1,32 @@
 package com.util.chefia.recetas.model;
 
-import jakarta.persistence.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "recetas")
+@Getter
+@Setter(AccessLevel.PROTECTED)
+@NoArgsConstructor
 public class Receta {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,76 +65,26 @@ public class Receta {
     @Column(name = "tipo_receta")
     private TipoReceta tipoReceta;
 
-    public Receta() {
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public Integer getTiempoMinutos() {
-        return tiempoMinutos;
-    }
-
-    public Dificultad getDificultad() {
-        return dificultad;
-    }
-
-    public TipoAlimentacion getTipoAlimentacion() {
-        return tipoAlimentacion;
-    }
-
-    public Set<String> getIngredientes() {
-        return ingredientes;
-    }
-
-    public Integer getPorciones() {
-        return porciones;
-    }
-
-    public List<String> getPasos() {
-        return pasos;
-    }
-
-    public Set<String> getTags() {
-        return tags;
-    }
+    @Column(name = "ingrediente_aditional", length = 100)
+    private String ingredienteAditional;
 
     public boolean isPublica() {
         return publica == null || publica;
     }
 
-    public String getUsuarioSub() {
-        return usuarioSub;
-    }
-
-    public Animo getAnimo() {
-        return animo;
-    }
-
-    public TipoReceta getTipoReceta() {
-        return tipoReceta;
-    }
-
-    public void actualizar(String n, String d, Integer t, Dificultad dif, TipoAlimentacion tipo, Set<String> ing) {
+    public void actualizar(String n, String d, Integer t, Dificultad dif, TipoAlimentacion tipo, Set<String> ing,
+            String ingAditional) {
         nombre = n;
         descripcion = d;
         tiempoMinutos = t;
         dificultad = dif;
         tipoAlimentacion = tipo;
+        ingredienteAditional = normalizarIngredienteAditional(ingAditional);
         ingredientes = new LinkedHashSet<>(ing);
     }
 
     public void configurarUsuario(String sub, boolean esPublica, Animo estado, TipoReceta tipo, Integer cantidad,
-            List<String> preparacion, Set<String> etiquetas) {
+            List<String> preparacion, Set<String> etiquetas, String ingAditional) {
         usuarioSub = sub;
         publica = esPublica;
         animo = estado;
@@ -120,9 +92,14 @@ public class Receta {
         porciones = cantidad;
         pasos = new ArrayList<>(preparacion);
         tags = new LinkedHashSet<>(etiquetas);
+        ingredienteAditional = normalizarIngredienteAditional(ingAditional);
     }
 
     public void definirTipoReceta(TipoReceta tipo) {
         tipoReceta = tipo;
+    }
+
+    private String normalizarIngredienteAditional(String valor) {
+        return valor == null ? "" : valor.trim();
     }
 }

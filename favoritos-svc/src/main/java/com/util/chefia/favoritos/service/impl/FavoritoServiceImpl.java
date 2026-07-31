@@ -9,16 +9,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.*;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class FavoritoServiceImpl implements FavoritoService {
     private final FavoritoRepository repository;
     private final RecetasClient recetas;
-
-    public FavoritoServiceImpl(FavoritoRepository repository, RecetasClient recetas) {
-        this.repository = repository;
-        this.recetas = recetas;
-    }
 
     @Override
     @Transactional(readOnly = true)

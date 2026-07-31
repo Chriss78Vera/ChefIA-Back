@@ -8,9 +8,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import com.util.chefia.recomendaciones.dto.RecomendacionDto.TipoReceta;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "recomendaciones_cache")
+@Getter
+@Setter(AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RecomendacionCache {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,9 +35,6 @@ public class RecomendacionCache {
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
-    protected RecomendacionCache() {
-    }
-
     public RecomendacionCache(String usuarioSub, String animo, TipoReceta tipoReceta, String preferencia,
             String recomendacionesJson, Instant creadoEn) {
         this.usuarioSub = usuarioSub;
@@ -41,31 +45,4 @@ public class RecomendacionCache {
         this.creadoEn = creadoEn;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getUsuarioSub() {
-        return usuarioSub;
-    }
-
-    public String getAnimo() {
-        return animo;
-    }
-
-    public String getTipoReceta() {
-        return tipoReceta;
-    }
-
-    public String getPreferencia() {
-        return preferencia;
-    }
-
-    public String getRecomendacionesJson() {
-        return recomendacionesJson;
-    }
-
-    public Instant getCreadoEn() {
-        return creadoEn;
-    }
 }

@@ -13,17 +13,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/recetas")
+@RequiredArgsConstructor
 public class RecetaController {
     private final RecetaService service;
     private final RecetaMapper mapper;
-
-    public RecetaController(RecetaService service, RecetaMapper mapper) {
-        this.service = service;
-        this.mapper = mapper;
-    }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('USUARIO','ADMIN')")

@@ -8,18 +8,15 @@ import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class CatalogoResilienteServiceImpl implements CatalogoResilienteService {
-  private static final Logger log = LoggerFactory.getLogger(CatalogoResilienteServiceImpl.class);
   private final RecetasClient client;
-
-  public CatalogoResilienteServiceImpl(RecetasClient client) {
-    this.client = client;
-  }
 
   @Override
   @CircuitBreaker(name = "recetas", fallbackMethod = "fallback")

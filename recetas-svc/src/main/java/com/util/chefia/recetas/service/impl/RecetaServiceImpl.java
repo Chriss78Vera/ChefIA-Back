@@ -12,16 +12,13 @@ import com.util.chefia.recetas.service.RecetaService;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class RecetaServiceImpl implements RecetaService {
   private final RecetaRepository repository;
   private final RecetaMapper mapper;
-
-  public RecetaServiceImpl(RecetaRepository repository, RecetaMapper mapper) {
-    this.repository = repository;
-    this.mapper = mapper;
-  }
 
   @Override
   @Transactional(readOnly = true)
@@ -49,8 +46,9 @@ public class RecetaServiceImpl implements RecetaService {
   public Receta crearUsuario(RecetaUsuarioRequest r, String sub) {
     Receta entity = new Receta();
     entity.actualizar(r.nombre(), r.descripcion(), r.tiempoMinutos(), r.dificultad(), r.tipoAlimentacion(),
-        r.ingredientes());
-    entity.configurarUsuario(sub, r.publica(), r.animo(), r.tipoReceta(), r.porciones(), r.pasos(), r.tags());
+        r.ingredientes(), r.ingredienteAditional());
+    entity.configurarUsuario(sub, r.publica(), r.animo(), r.tipoReceta(), r.porciones(), r.pasos(), r.tags(),
+        r.ingredienteAditional());
     return repository.save(entity);
   }
 

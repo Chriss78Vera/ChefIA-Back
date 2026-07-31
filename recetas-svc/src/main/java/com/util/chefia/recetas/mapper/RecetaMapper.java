@@ -15,7 +15,8 @@ public class RecetaMapper {
                 request.tiempoMinutos(),
                 request.dificultad(),
                 request.tipoAlimentacion(),
-                request.ingredientes());
+                request.ingredientes(),
+                request.ingredienteAditional());
         receta.definirTipoReceta(request.tipoReceta());
     }
 
@@ -27,7 +28,7 @@ public class RecetaMapper {
                 receta.getTiempoMinutos(),
                 receta.getDificultad(),
                 receta.getTipoAlimentacion(),
-                Set.copyOf(receta.getIngredientes()), receta.getPorciones(), List.copyOf(receta.getPasos()),
+                Set.copyOf(receta.getIngredientes()), receta.getIngredienteAditional(), receta.getPorciones(), List.copyOf(receta.getPasos()),
                 Set.copyOf(receta.getTags()), receta.isPublica(), receta.getUsuarioSub(), receta.getAnimo(),
                 receta.getTipoReceta());
     }

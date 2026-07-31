@@ -9,18 +9,15 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/favoritos")
 @PreAuthorize("hasAnyRole('USUARIO','ADMIN')")
+@RequiredArgsConstructor
 public class FavoritoController {
     private final FavoritoService service;
     private final FavoritoMapper mapper;
-
-    public FavoritoController(FavoritoService service, FavoritoMapper mapper) {
-        this.service = service;
-        this.mapper = mapper;
-    }
 
     @GetMapping
     public List<FavoritoResponse> listar(@AuthenticationPrincipal Jwt jwt) {
